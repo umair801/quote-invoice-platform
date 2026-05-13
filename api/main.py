@@ -10,6 +10,7 @@ from api.quote_router import router as quote_router
 from api.order_router import router as order_router
 from api.auth_router import router as auth_router
 from api.catalog_router import router as catalog_router
+from api.pricing_router import router as pricing_router
 
 # Configure structured logging on startup
 configure_logging()
@@ -41,6 +42,7 @@ app.include_router(quote_router)
 app.include_router(order_router)
 app.include_router(auth_router)
 app.include_router(catalog_router)
+app.include_router(pricing_router)
 
 
 # ─── Root ─────────────────────────────────────────────────────────────────────
