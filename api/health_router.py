@@ -6,11 +6,11 @@ from fastapi import APIRouter
 from datetime import datetime, timezone
 from core.config import get_settings
 
-router = APIRouter(prefix="/health", tags=["Health"])
+router = APIRouter(tags=["Health"])
 settings = get_settings()
 
 
-@router.get("/")
+@router.get("/health")
 def health_check():
     """Basic liveness check. Returns 200 if the app is running."""
     return {
@@ -21,7 +21,7 @@ def health_check():
     }
 
 
-@router.get("/qbo")
+@router.get("/health/qbo")
 def qbo_health():
     """Check QuickBooks Online API connectivity."""
     from integrations.qbo_invoice_client import check_qbo_connection
@@ -34,7 +34,7 @@ def qbo_health():
     }
 
 
-@router.get("/monday")
+@router.get("/health/monday")
 def monday_health():
     """Check Monday.com API connectivity."""
     from integrations.monday_client import check_monday_connection
