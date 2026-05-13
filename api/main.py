@@ -1,5 +1,5 @@
 # api/main.py
-# AgAI_27 - Quote-to-Invoice Platform
+# Quote-to-Invoice Platform
 # FastAPI application entry point.
 
 from fastapi import FastAPI
@@ -9,12 +9,13 @@ from api.health_router import router as health_router
 from api.quote_router import router as quote_router
 from api.order_router import router as order_router
 from api.auth_router import router as auth_router
+from api.catalog_router import router as catalog_router
 
 # Configure structured logging on startup
 configure_logging()
 
 app = FastAPI(
-    title="AgAI_27 Quote-to-Invoice Platform",
+    title="Quote-to-Invoice Platform",
     description=(
         "Pricing configurator, branded PDF quote generation, "
         "QuickBooks Online invoice push, and Monday.com production item creation."
@@ -25,7 +26,7 @@ app = FastAPI(
     redirect_slashes=True,
 )
 
-# CORS - restrict in production
+# CORS - restrict in production via environment variable
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -39,13 +40,14 @@ app.include_router(health_router)
 app.include_router(quote_router)
 app.include_router(order_router)
 app.include_router(auth_router)
+app.include_router(catalog_router)
 
 
 # ─── Root ─────────────────────────────────────────────────────────────────────
 @app.get("/", include_in_schema=False)
 def root():
     return {
-        "app": "AgAI_27 Quote-to-Invoice Platform",
+        "app": "Quote-to-Invoice Platform",
         "docs": "/docs",
         "health": "/health",
     }

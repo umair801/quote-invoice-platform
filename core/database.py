@@ -118,7 +118,7 @@ def get_metrics() -> dict:
 
 
 # =============================================================================
-# AgAI_27 - Quote-to-Invoice Platform DB Functions
+# Quote-to-Invoice Platform DB Functions
 # =============================================================================
 
 # --- Quotes ------------------------------------------------------------------
@@ -137,10 +137,10 @@ def get_quote_by_number(quote_number: str) -> dict:
         client.table("quote_quotes")
         .select("*")
         .eq("quote_number", quote_number)
-        .single()
+        .limit(1)
         .execute()
     )
-    return result.data or {}
+    return result.data[0] if result.data else {}
 
 
 def get_quote_by_id(quote_id: str) -> dict:
@@ -150,10 +150,10 @@ def get_quote_by_id(quote_id: str) -> dict:
         client.table("quote_quotes")
         .select("*")
         .eq("id", quote_id)
-        .single()
+        .limit(1)
         .execute()
     )
-    return result.data or {}
+    return result.data[0] if result.data else {}
 
 
 def update_quote(quote_number: str, payload: dict) -> dict:
@@ -194,10 +194,10 @@ def get_order_by_number(order_number: str) -> dict:
         client.table("quote_orders")
         .select("*")
         .eq("order_number", order_number)
-        .single()
+        .limit(1)
         .execute()
     )
-    return result.data or {}
+    return result.data[0] if result.data else {}
 
 
 def update_order(order_number: str, payload: dict) -> dict:
@@ -229,3 +229,84 @@ def insert_quote_audit(data: dict) -> dict:
     client = get_supabase()
     result = client.table("quote_audit_log").insert(data).execute()
     return result.data[0] if result.data else {}
+
+
+# --- Catalog -----------------------------------------------------------------
+
+def insert_catalog_item(data: dict) -> dict:
+    """Insert a new catalog item into quote_catalog."""
+    client = get_supabase()
+    result = client.table("quote_catalog").insert(data).execute()
+    return result.data[0] if result.data else {}
+
+
+def get_catalog_item_by_sku(sku: str) -> dict:
+    """Fetch a single catalog item by SKU. Returns {} if not found."""
+    client = get_supabase()
+    result = (
+        client.table("quote_catalog")
+        .select("*")
+        .eq("sku", sku)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else {}
+
+
+def get_catalog_item_by_id(item_id: str) -> dict:
+    """Fetch a single catalog item by UUID. Returns {} if not found."""
+    client = get_supabase()
+    result = (
+        client.table("quote_catalog")
+        .select("*")
+        .eq("id", item_id)
+        .limit(1)
+        .execute()
+    )
+    return result.data[0] if result.data else {}
+
+
+def update_catalog_item(item_id: str, payload: dict) -> dict:
+    """Update fields on a catalog item by UUID."""
+    client = get_supabase()
+    result = (
+        client.table("quote_catalog")
+        .update(payload)
+        .eq("id", item_id)
+        .execute()
+    )
+    return result.data[0] if result.data else {}
+
+
+def delete_catalog_item(item_id: str) -> bool:
+    """Soft-delete a catalog item by setting is_active=False."""
+    client = get_supabase()
+    result = (
+        client.table("quote_catalog")
+        .update({"is_active": False})
+        .eq("id", item_id)
+        .execute()
+    )
+    return bool(result.data)
+
+
+def list_catalog_items(
+    category: str = None,
+    active_only: bool = True,
+    limit: int = 200,
+) -> list:
+    """List catalog items, optionally filtered by category and active status."""
+    client = get_supabase()
+    query = (
+        client.table("quote_catalog")
+        .select("*")
+        .order("sort_order", desc=False)
+        .order("name", desc=False)
+        .limit(limit)
+    )
+    if category:
+        query = query.eq("category", category)
+    if active_only:
+        query = query.eq("is_active", True)
+    result = query.execute()
+    return result.data or []
