@@ -12,41 +12,33 @@ import { calculatePrice, createQuote } from '../api'
 const DEFAULT_TAX = 0.08875  // NYC default (8.875%)
 
 const emptyForm = {
-  // Client info
   client_name:    '',
   client_email:   '',
   client_phone:   '',
-
-  // Artwork
   artwork_title:  '',
   width_inches:   '',
   height_inches:  '',
-
-  // Selections
   moulding_sku:   null,
   glass_sku:      null,
   mat_sku:        null,
   mounting_sku:   null,
   labor_skus:     [],
-
-  // Options
   tax_rate:       DEFAULT_TAX,
   notes:          '',
 }
 
 export default function ConfiguratorPage() {
   const navigate = useNavigate()
-  const [form, setForm]           = useState(emptyForm)
+  const [form, setForm]               = useState(emptyForm)
   const [priceResult, setPriceResult] = useState(null)
   const [calculating, setCalculating] = useState(false)
-  const [saving, setSaving]       = useState(false)
-  const [saveError, setSaveError] = useState(null)
+  const [saving, setSaving]           = useState(false)
+  const [saveError, setSaveError]     = useState(null)
   const [saveSuccess, setSaveSuccess] = useState(null)
   const debounceRef = useRef(null)
 
-  // ─── Field helpers ──────────────────────────────────────────────────────────
-  const set = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
-  const setInput = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }))
+  const set      = (field) => (val) => setForm(f => ({ ...f, [field]: val }))
+  const setInput = (field) => (e)   => setForm(f => ({ ...f, [field]: e.target.value }))
 
   // ─── Live price calculation (debounced 500ms) ────────────────────────────
   const runCalculation = useCallback((f) => {
@@ -104,25 +96,31 @@ export default function ConfiguratorPage() {
 
     setSaving(true)
     try {
+      // Build payload matching CreateQuoteRequest schema exactly
       const payload = {
-        client_info: {
-          name:  form.client_name.trim(),
-          email: form.client_email.trim(),
-          phone: form.client_phone.trim(),
+        client: {
+          client_name:   form.client_name.trim(),
+          contact_email: form.client_email.trim() || undefined,
+          contact_phone: form.client_phone.trim() || undefined,
         },
-        artwork_specs: {
-          title:         form.artwork_title.trim(),
+        artwork: {
           width_inches:  parseFloat(form.width_inches),
           height_inches: parseFloat(form.height_inches),
+          notes:         form.artwork_title.trim() || undefined,
         },
-        line_items:    priceResult.line_items,
-        subtotal:      priceResult.subtotal,
-        tax_rate:      priceResult.tax_rate,
-        tax_amount:    priceResult.tax,
-        total_amount:  priceResult.total,
-        notes:         form.notes.trim(),
-        status:        'draft',
+        line_items: priceResult.line_items.map(item => ({
+          line_number:  item.line_number,
+          category:     item.category,
+          description:  item.description,
+          quantity:     item.quantity,
+          unit_price:   item.unit_price,
+          sku:          item.sku   || undefined,
+          notes:        item.notes || undefined,
+        })),
+        tax:   priceResult.tax,
+        notes: form.notes.trim() || undefined,
       }
+
       const res = await createQuote(payload)
       const qNum = res.data?.quote_number
       setSaveSuccess(`Quote ${qNum} saved as draft.`)
@@ -136,7 +134,6 @@ export default function ConfiguratorPage() {
     }
   }
 
-  // ─── Reset form ──────────────────────────────────────────────────────────
   const handleReset = () => {
     setForm(emptyForm)
     setPriceResult(null)
@@ -144,7 +141,6 @@ export default function ConfiguratorPage() {
     setSaveSuccess(null)
   }
 
-  // ─── Render ──────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
 
@@ -163,7 +159,7 @@ export default function ConfiguratorPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        {/* ── Left column: client + dimensions + material selectors ─────── */}
+        {/* ── Left column ───────────────────────────────────────────────── */}
         <div className="lg:col-span-2 space-y-5">
 
           {/* Client info */}
@@ -250,24 +246,9 @@ export default function ConfiguratorPage() {
             <h2 className="font-semibold text-navy text-base border-b border-gray-100 pb-2">
               Glazing, Mat & Mounting
             </h2>
-            <CategorySelect
-              category="glass"
-              label="Glass / Glazing"
-              value={form.glass_sku}
-              onChange={set('glass_sku')}
-            />
-            <CategorySelect
-              category="mat"
-              label="Mat Board"
-              value={form.mat_sku}
-              onChange={set('mat_sku')}
-            />
-            <CategorySelect
-              category="mounting"
-              label="Mounting Method"
-              value={form.mounting_sku}
-              onChange={set('mounting_sku')}
-            />
+            <CategorySelect category="glass"    label="Glass / Glazing"   value={form.glass_sku}    onChange={set('glass_sku')} />
+            <CategorySelect category="mat"      label="Mat Board"         value={form.mat_sku}      onChange={set('mat_sku')} />
+            <CategorySelect category="mounting" label="Mounting Method"   value={form.mounting_sku} onChange={set('mounting_sku')} />
           </div>
 
           {/* Labor */}
@@ -292,11 +273,7 @@ export default function ConfiguratorPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="label">Tax Rate</label>
-                <select
-                  className="input"
-                  value={form.tax_rate}
-                  onChange={setInput('tax_rate')}
-                >
+                <select className="input" value={form.tax_rate} onChange={setInput('tax_rate')}>
                   <option value={0}>No Tax (0%)</option>
                   <option value={0.08875}>NYC Tax (8.875%)</option>
                   <option value={0.08}>8%</option>
@@ -306,18 +283,16 @@ export default function ConfiguratorPage() {
               <div>
                 <label className="label">Notes</label>
                 <textarea
-                  className="input resize-none"
-                  rows={2}
+                  className="input resize-none" rows={2}
                   placeholder="Special instructions, framing notes..."
-                  value={form.notes}
-                  onChange={setInput('notes')}
+                  value={form.notes} onChange={setInput('notes')}
                 />
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── Right column: live price breakdown + save button ──────────── */}
+        {/* ── Right column: price breakdown + save ─────────────────────── */}
         <div className="space-y-4">
           <div className="card sticky top-6">
             <h2 className="font-semibold text-navy text-base border-b border-gray-100 pb-2 mb-4">
@@ -325,7 +300,6 @@ export default function ConfiguratorPage() {
             </h2>
             <PriceBreakdown result={priceResult} loading={calculating} />
 
-            {/* Save as draft */}
             <div className="mt-6 space-y-3">
               {saveError && (
                 <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">
