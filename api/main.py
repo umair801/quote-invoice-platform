@@ -27,10 +27,12 @@ app = FastAPI(
     redirect_slashes=True,
 )
 
-# CORS - restrict in production via environment variable
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "https://quote.datawebify.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
